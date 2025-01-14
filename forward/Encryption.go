@@ -13,6 +13,13 @@ import (
 	"crypto/rc4"
 )
 
+func ReverseBytes(data []byte) {
+	size := len(data)
+	for i := 0; i < size/2; i++ {
+		data[i], data[size-i-1] = data[size-i-1], data[i]
+	}
+}
+
 func PacketEncrypt(dst []byte, src []byte, key []byte) bool {
 	if len(dst) != len(src)+4 {
 		return false
@@ -40,8 +47,15 @@ func PacketEncrypt(dst []byte, src []byte, key []byte) bool {
 		return false
 	}
 	c.XORKeyStream(dst[4:], src)
-	for i := 4; i < len(dst); i++ {
-		dst[i] ^= dst[i&3]
+	size := len(src)
+	for i := 0; i < size; i++ {
+		dst[i+4] ^= dst[i&3]
+	}
+	if true {
+		for i := 1; i < len(dst); i++ {
+			dst[i] += dst[i-1]
+		}
+		ReverseBytes(dst)
 	}
 	return true
 }
@@ -54,6 +68,15 @@ func PacketDecrypt(dst []byte, src []byte, key []byte) bool {
 		copy(dst, src[4:])
 		return true
 	}
+	if true {
+		ReverseBytes(src)
+		var previous byte = src[0]
+		for i := 1; i < len(src); i++ {
+			p := src[i]
+			src[i] -= previous
+			previous = p
+		}
+	}
 	if len(key) > 256 {
 		key = key[:256]
 	}
@@ -62,8 +85,9 @@ func PacketDecrypt(dst []byte, src []byte, key []byte) bool {
 		return false
 	}
 	c.XORKeyStream(dst, src[4:])
-	for i := 4; i < len(src); i++ {
-		dst[i-4] ^= src[i&3]
+	size := len(src) - 4
+	for i := 0; i < size; i++ {
+		dst[i] ^= src[i&3]
 	}
 	return true
 }
