@@ -11,12 +11,31 @@ package forward
 import (
 	"crypto/rand"
 	"crypto/rc4"
+	"encoding/binary"
 )
 
 func ReverseBytes(data []byte) {
 	size := len(data)
 	for i := 0; i < size/2; i++ {
 		data[i], data[size-i-1] = data[size-i-1], data[i]
+	}
+}
+
+func CipherChaining(data []byte, reverse bool) {
+	size := len(data)
+	if size > 0 {
+		if !reverse {
+			for i := 1; i < size; i++ {
+				data[i] += data[i-1]
+			}
+		} else {
+			previous := data[0]
+			for i := 1; i < size; i++ {
+				p := data[i]
+				data[i] -= previous
+				previous = p
+			}
+		}
 	}
 }
 
@@ -52,9 +71,7 @@ func PacketEncrypt(dst []byte, src []byte, key []byte) bool {
 		dst[i+4] ^= dst[i&3]
 	}
 	if true {
-		for i := 1; i < len(dst); i++ {
-			dst[i] += dst[i-1]
-		}
+		CipherChaining(dst, false)
 		ReverseBytes(dst)
 	}
 	return true
@@ -70,12 +87,7 @@ func PacketDecrypt(dst []byte, src []byte, key []byte) bool {
 	}
 	if true {
 		ReverseBytes(src)
-		var previous byte = src[0]
-		for i := 1; i < len(src); i++ {
-			p := src[i]
-			src[i] -= previous
-			previous = p
-		}
+		CipherChaining(src, true)
 	}
 	if len(key) > 256 {
 		key = key[:256]
@@ -90,4 +102,56 @@ func PacketDecrypt(dst []byte, src []byte, key []byte) bool {
 		dst[i] ^= src[i&3]
 	}
 	return true
+}
+
+func PacketEncode(pkt []byte, key []byte, seq int64) int {
+	if cap(pkt) < len(pkt)+8 {
+		panic("PacketEncode: buffer too small")
+		return -1
+	}
+	size := len(pkt)
+	pkt = pkt[:size+8]
+	for i := size - 1; i >= 0; i-- {
+		pkt[i+8] = pkt[i]
+	}
+	binary.LittleEndian.PutUint64(pkt[:8], uint64(seq))
+	if len(key) == 0 {
+		return size + 8
+	}
+	for i := 0; i < size; i++ {
+		pkt[i+8] ^= pkt[i&7]
+	}
+	c, err := rc4.NewCipher(key)
+	if err != nil {
+		return -2
+	}
+	c.XORKeyStream(pkt, pkt)
+	return size + 8
+}
+
+func PacketDecode(pkt []byte, key []byte, seq *int64) int {
+	if len(pkt) < 8 {
+		return -1
+	}
+	size := len(pkt) - 8
+	if len(key) == 0 {
+		*seq = int64(binary.LittleEndian.Uint64(pkt[:8]))
+		for i := 0; i < size; i++ {
+			pkt[i] = pkt[i+8]
+		}
+		return size
+	}
+	c, err := rc4.NewCipher(key)
+	if err != nil {
+		return -2
+	}
+	c.XORKeyStream(pkt, pkt)
+	*seq = int64(binary.LittleEndian.Uint64(pkt[:8]))
+	for i := 0; i < size; i++ {
+		pkt[i+8] ^= pkt[i&7]
+	}
+	for i := 0; i < size; i++ {
+		pkt[i] = pkt[i+8]
+	}
+	return size
 }

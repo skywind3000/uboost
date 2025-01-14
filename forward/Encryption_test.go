@@ -33,5 +33,6 @@ func TestEncryption(t *testing.T) {
 		// }
 	}
 	ts = time.Now().Nanosecond() - ts
+
 	t.Log("encrypt/decrypt 100 times cost", ts, "ns")
 }
