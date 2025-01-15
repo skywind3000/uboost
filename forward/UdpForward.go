@@ -28,6 +28,7 @@ type UdpForward struct {
 	dstAddr   *net.UDPAddr
 	logger    *log.Logger
 	wg        sync.WaitGroup
+	fec       int
 	mark      uint32
 }
 
@@ -41,6 +42,7 @@ func NewUdpForward(side ForwardSide) *UdpForward {
 		mask:      nil,
 		logger:    nil,
 		mark:      0,
+		fec:       0,
 	}
 	self.udpServer = NewUdpSocket()
 	self.udpServer.SetCallback(self.onServerPacket)
@@ -57,6 +59,10 @@ func (self *UdpForward) SetLogger(logger *log.Logger) {
 
 func (self *UdpForward) SetMark(mark uint32) {
 	self.mark = mark
+}
+
+func (self *UdpForward) SetFec(fec int) {
+	self.fec = fec
 }
 
 func (self *UdpForward) Open(srcAddr *net.UDPAddr, dstAddr *net.UDPAddr, mask string) error {
@@ -110,6 +116,7 @@ func (self *UdpForward) newClient(key string, srcAddr *net.UDPAddr) *UdpClient {
 	client.key = key
 	client.mask = self.mask
 	client.logger = self.logger
+	client.fec = self.fec
 	self.wg.Add(1)
 	err := client.Open(srcAddr, self.dstAddr)
 	if err != nil {

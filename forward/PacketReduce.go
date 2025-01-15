@@ -8,11 +8,14 @@
 // =====================================================================
 package forward
 
+import "sync"
+
 type PacketReduce struct {
 	packets map[int64]bool
 	size    int64
 	seqMax  int64
 	seqMin  int64
+	lock    sync.Mutex
 }
 
 func NewPacketReduce(size int) *PacketReduce {
@@ -21,6 +24,7 @@ func NewPacketReduce(size int) *PacketReduce {
 		size:    int64(max(size, 1)),
 		seqMax:  -1,
 		seqMin:  -1,
+		lock:    sync.Mutex{},
 	}
 	return self
 }
@@ -68,4 +72,18 @@ func (self *PacketReduce) Push(seq int64) bool {
 		self.Add(seq)
 	}
 	return !exists
+}
+
+func (self *PacketReduce) Lock() {
+	self.lock.Lock()
+}
+
+func (self *PacketReduce) Unlock() {
+	self.lock.Unlock()
+}
+
+func (self *PacketReduce) PacketAccept(seq int64) bool {
+	self.Lock()
+	defer self.Unlock()
+	return self.Push(seq)
 }

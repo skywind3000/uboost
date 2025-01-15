@@ -96,7 +96,7 @@ func (self *UdpSocket) backgroundReceiving() {
 	if self.logPacket != nil {
 		self.logPacket.Printf("backgroundReceiving start")
 	}
-	data := make([]byte, 1024*64)
+	data := make([]byte, 1024*96)
 	for !self.closing.Load() {
 		n, addr, err := self.conn.ReadFromUDP(data)
 		if err != nil {

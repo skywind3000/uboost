@@ -30,6 +30,9 @@ type UdpClient struct {
 	mask     []byte
 	cache    []byte
 	timeout  int
+	fec      int
+	reduce   *PacketReduce
+	index    atomic.Int64
 	lock     sync.Mutex
 	wg       sync.WaitGroup
 }
@@ -47,10 +50,13 @@ func NewUdpClient() *UdpClient {
 		key:      "",
 		timeout:  300,
 		logger:   nil,
+		fec:      0,
 		lock:     sync.Mutex{},
 		wg:       sync.WaitGroup{},
 		closing:  atomic.Bool{},
 	}
+	self.reduce = NewPacketReduce(8192)
+	self.index.Store(0)
 	self.closing.Store(false)
 	return self
 }
@@ -122,21 +128,51 @@ func (self *UdpClient) recvLoop() {
 	self.wg.Done()
 }
 
-func (self *UdpClient) SendTo(data []byte) error {
+func (self *UdpClient) _sendpkt(data []byte) error {
 	if self.conn == nil {
 		return nil
 	}
-	var dst []byte = self.cache[:len(data)]
-	EncryptRC4(dst, data, self.mask)
 	now := time.Now()
 	duration := time.Second * time.Duration(self.timeout)
-	self.conn.SetWriteDeadline(now.Add(time.Millisecond * 100))
+	self.conn.SetWriteDeadline(now.Add(time.Millisecond * 50))
 	self.conn.SetReadDeadline(now.Add(duration))
-	_, err := self.conn.Write(dst)
+	_, err := self.conn.Write(data)
 	if err != nil {
 		if self.logger != nil {
 			self.logger.Printf("sendto error: %s\n", err)
 		}
 	}
 	return err
+}
+
+func (self *UdpClient) SendTo(data []byte) error {
+	if self.conn == nil {
+		return nil
+	}
+	if self.side == ForwardSideServer {
+		var seq int64 = 0
+		size := PacketDecode(data, self.mask, &seq)
+		if size < 0 {
+			return nil
+		}
+		data = data[:size]
+		if self.reduce.PacketAccept(seq) {
+			return self._sendpkt(data)
+		}
+	} else {
+		seq := self.index.Add(1)
+		size := PacketEncode(data, self.mask, seq)
+		if size < 0 {
+			return nil
+		}
+		data = data[:size]
+		hr := self._sendpkt(data)
+		if hr == nil {
+			for i := 0; i < self.fec; i++ {
+				self._sendpkt(data)
+			}
+		}
+		return hr
+	}
+	return nil
 }
