@@ -126,6 +126,8 @@ func PacketEncode(pkt []byte, key []byte, seq int64) int {
 		return -2
 	}
 	c.XORKeyStream(pkt, pkt)
+	CipherChaining(pkt, false)
+	ReverseBytes(pkt)
 	return size + 8
 }
 
@@ -145,6 +147,8 @@ func PacketDecode(pkt []byte, key []byte, seq *int64) int {
 	if err != nil {
 		return -2
 	}
+	ReverseBytes(pkt)
+	CipherChaining(pkt, true)
 	c.XORKeyStream(pkt, pkt)
 	*seq = int64(binary.LittleEndian.Uint64(pkt[:8]))
 	for i := 0; i < size; i++ {

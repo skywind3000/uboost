@@ -36,3 +36,46 @@ func TestEncryption(t *testing.T) {
 
 	t.Log("encrypt/decrypt 100 times cost", ts, "ns")
 }
+
+func TestPacketEncode(t *testing.T) {
+	key := []byte("foobar")
+	src := []byte("hello")
+	dst := make([]byte, len(src)+8)
+	copy(dst, src)
+	h1 := PacketEncode(dst[:len(src)], key, 1234)
+	if h1 != len(src)+8 {
+		t.Error("encode failed")
+	}
+	if bytes.Equal(dst, src) {
+		t.Error("encrypt failed")
+	}
+	var seq int64
+	h2 := PacketDecode(dst, key, &seq)
+	if h2 != len(src) {
+		t.Error("decode failed")
+	}
+	if !bytes.Equal(dst[:len(src)], src) {
+		t.Error("decrypt failed")
+	}
+	if seq != 1234 {
+		t.Error("seq not match")
+	}
+	src = make([]byte, 65536)
+	dst = make([]byte, len(src)+8)
+	rand.Read(src)
+	copy(dst, src)
+	ts := time.Now().Nanosecond()
+	for i := 0; i < 100; i++ {
+		PacketEncode(dst[:len(src)], key, 1234)
+		PacketDecode(dst, key, &seq)
+		if seq != 1234 {
+			t.Error("seq not match")
+		}
+		if !bytes.Equal(dst[:len(src)], src) {
+			t.Error("decrypt failed")
+		}
+	}
+	ts = time.Now().Nanosecond() - ts
+
+	t.Log("encode/decode 100 times cost", ts, "ns")
+}
