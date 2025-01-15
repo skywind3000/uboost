@@ -25,6 +25,7 @@ func main() {
 	side := flag.String("side", "", "forward side: client/server")
 	fec := flag.Int("fec", 0, "fec redundancy")
 	flag.Parse()
+
 	flag.Usage = func() {
 		flagSet := flag.CommandLine
 		fmt.Printf("Usage of %s:\n", os.Args[0])
@@ -38,6 +39,7 @@ func main() {
 			fmt.Printf("        %s\n", flag.Usage)
 		}
 	}
+
 	if src == nil || dst == nil || side == nil {
 		flag.Usage()
 		return
