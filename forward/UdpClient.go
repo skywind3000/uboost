@@ -106,7 +106,7 @@ func (self *UdpClient) Close() {
 }
 
 func (self *UdpClient) recvLoop() {
-	buf := make([]byte, 65536)
+	buf := make([]byte, 1024*96)
 	for !self.closing.Load() {
 		duration := time.Second * time.Duration(self.timeout)
 		self.conn.SetReadDeadline(time.Now().Add(duration))
@@ -115,11 +115,30 @@ func (self *UdpClient) recvLoop() {
 			break
 		}
 		data := buf[:n]
-		if self.receiver != nil {
-			if len(self.mask) > 0 {
-				EncryptRC4(data, data, self.mask)
+		if self.receiver == nil {
+			continue
+		}
+		if self.side == ForwardSideServer {
+			seq := self.index.Add(1)
+			hr := PacketEncode(data, self.mask, seq)
+			if hr < 0 {
+				continue
 			}
+			data = data[:hr]
 			self.receiver(self, data)
+			for i := 0; i < self.fec; i++ {
+				self.receiver(self, data)
+			}
+		} else {
+			var seq int64 = 0
+			hr := PacketDecode(data, self.mask, &seq)
+			if hr < 0 {
+				continue
+			}
+			data = data[:hr]
+			if self.reduce.PacketAccept(seq) {
+				self.receiver(self, data)
+			}
 		}
 	}
 	if self.closer != nil {
