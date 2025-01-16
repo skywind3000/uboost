@@ -17,12 +17,12 @@ import (
 )
 
 type ServiceConfig struct {
+	Side    forward.ForwardSide
 	SrcAddr string
 	DstAddr string
 	Mask    string
-	Mark    uint32
 	Fec     int
-	Side    forward.ForwardSide
+	Mark    uint32
 }
 
 func StartService(config ServiceConfig) int {
