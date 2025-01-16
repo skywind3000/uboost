@@ -17,9 +17,9 @@ import (
 )
 
 type ServiceConfig struct {
-	Side    forward.ForwardSide
 	SrcAddr string
 	DstAddr string
+	Side    forward.ForwardSide
 	Mask    string
 	Fec     int
 	Mark    uint32
