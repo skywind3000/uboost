@@ -42,9 +42,11 @@ The dns request to 127.0.0.1:53 will be accepted by uboost client and forward to
 
 ## Download
 
-See the [releases](https://github.com/skywind3000/uboost/releases) page.
+Download the binaries in the [releases](https://github.com/skywind3000/uboost/releases) page.
 
 ## Usage
+
+And execute it in the command line:
 
 ```text
 Usage of ./uboost:
@@ -61,6 +63,8 @@ Usage of ./uboost:
   -mark uint
         fwmark value
 ```
+
+To see the usage documentation.
 
 ## Credit
 
