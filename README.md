@@ -40,6 +40,9 @@ nslookup www.google.com 127.0.0.1
 
 The dns request to 127.0.0.1:53 will be accepted by uboost client and forward to 8.8.8.8:53 via uboost server. 
 
+## Download
+
+See the [releases](https://github.com/skywind3000/uboost/releases) page.
 
 ## Usage
 
