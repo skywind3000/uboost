@@ -19,13 +19,13 @@ client --> (uboost client) --> (uboost server) --> 8.8.8.8:53
 Assuming that you want to forward UDP traffic from local port 53 to 8.8.8.8:53, you are required to start a uboost server to forward packet:
 
 ```bash
-./uboost -side server 0.0.0.0:5300 8.8.8.8:53 -mask secret -fec 1
+./uboost -side server -src 0.0.0.0:5300 -dst 8.8.8.8:53 -mask secret -fec 1
 ```
 
 and also a uboost client to serve on local port 53:
 
 ```bash
-./uboost -side client 0.0.0.0:53 120.50.20.7:5300 -mask secret -fec 1
+./uboost -side client -src 0.0.0.0:53 -dst 120.50.20.7:5300 -mask secret -fec 1
 ```
 
 (PS: 120.50.20.7 is the remote server running uboost server)
